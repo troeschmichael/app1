@@ -10,15 +10,20 @@ const logoutBtn = document.getElementById('logout-btn');
 const userSpan = document.getElementById('username-display');
 
 const allowedUsers = ['admin', 'Mike'];
-
 const usersTableBody = document.querySelector('#users-table tbody');
 
-// Funktion: Benutzerliste laden
+const AUTH_PROXY = '/auth'; // Nginx leitet /auth/ an Auth-Service weiter
+
+// --- Benutzerliste laden ---
 const loadUsers = async () => {
+  if (!token) return; // nur wenn eingeloggt
   try {
-    const res = await fetch('/users');
+    const res = await fetch(`${AUTH_PROXY}/users`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Fehler beim Laden der Benutzer');
     const users = await res.json();
-    usersTableBody.innerHTML = ''; // Tabelle leeren
+    usersTableBody.innerHTML = '';
     users.forEach(u => {
       const row = document.createElement('tr');
       row.innerHTML = `<td>${u.id}</td><td>${u.username}</td><td>${u.password_hash}</td>`;
@@ -29,89 +34,88 @@ const loadUsers = async () => {
   }
 };
 
-// Nach Login: Benutzerliste laden
-if (token) loadUsers();
-
-// Nach Register: Benutzerliste aktualisieren
-document.getElementById('register-btn').addEventListener('click', async () => {
-  const newUsername = document.getElementById('new-username').value;
-  const newPassword = document.getElementById('new-password').value;
-
-  const res = await fetch('/register', {  // <-- hier nur App1
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: newUsername, password: newPassword })
-  });
-
-  const text = await res.text();
-  alert(text);
-});
-
+// --- UI anzeigen ---
 const showUser = () => {
   if (token && username) {
-    userSpan.textContent = username; // Nur Benutzername
-    document.getElementById('register-form').style.display = 'block';
-    logoutBtn.style.display = 'inline-block'; // Button sichtbar
+    userSpan.textContent = username;
+    registerFormDiv.style.display = 'block';
+    logoutBtn.style.display = 'inline-block';
   } else {
     userSpan.textContent = '';
-    document.getElementById('register-form').style.display = 'none';
+    registerFormDiv.style.display = 'none';
     logoutBtn.style.display = 'none';
   }
 };
 
+// --- Logout ---
 logoutBtn.onclick = () => {
   token = null;
   username = null;
   localStorage.removeItem('token');
   localStorage.removeItem('username');
   showUser();
-  document.querySelector('#users-table tbody').innerHTML = '';
+  usersTableBody.innerHTML = '';
 };
 
-showUser();
-
-// Login
+// --- Login ---
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const usernameInput = document.getElementById('username').value;
   const passwordInput = document.getElementById('password').value;
-  
-  // Nur erlaubte Benutzer
+
   if (!allowedUsers.includes(usernameInput)) {
     alert('Dieser Benutzer darf sich nicht einloggen');
     return;
   }
 
-  const res = await fetch('/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: usernameInput, password: passwordInput })
-  });
+  try {
+    const res = await fetch(`${AUTH_PROXY}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: usernameInput, password: passwordInput })
+    });
 
-  const data = await res.json();
-  if (data.token) {
-    token = data.token;
-    username = usernameInput;
-    localStorage.setItem('token', token);
-    localStorage.setItem('username', username);
-    showUser();
-    loadUsers(); // Benutzerliste nach Login laden
-  } else {
-    alert('Login fehlgeschlagen');
+    const data = await res.json();
+    if (res.ok && data.token) {
+      token = data.token;
+      username = usernameInput;
+      localStorage.setItem('token', token);
+      localStorage.setItem('username', username);
+      showUser();
+      loadUsers();
+    } else {
+      alert('Login fehlgeschlagen');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Fehler beim Login');
   }
 });
 
-// Register neuer Benutzer
+// --- Register ---
 document.getElementById('register-btn').addEventListener('click', async () => {
   const newUsername = document.getElementById('new-username').value;
   const newPassword = document.getElementById('new-password').value;
 
-  const res = await fetch(`${window.location.origin.replace('3001','4000')}/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: newUsername, password: newPassword })
-  });
+  try {
+    const res = await fetch(`${AUTH_PROXY}/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ username: newUsername, password: newPassword })
+    });
 
-  const text = await res.text();
-  alert(text);
+    const text = await res.text();
+    alert(text);
+    loadUsers(); // nach Register Liste aktualisieren
+  } catch (e) {
+    console.error(e);
+    alert('Fehler beim Registrieren');
+  }
 });
+
+// --- Initialisierung ---
+showUser();
+if (token) loadUsers();

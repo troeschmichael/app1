@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 
 
 const PORT = 3001;
-const AUTH_URL = 'http://localhost:4000';
+const AUTH_URL = '/auth';  // oder volle URL: https://127.0.0.1/auth
 const JWT_SECRET = 'secretkey';
 
 const app = express();
