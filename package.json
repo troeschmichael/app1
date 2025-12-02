@@ -1,4 +1,7 @@
 {
+  "name": "app1",
+  "version": "1.0.0",
+  "type": "module",
   "dependencies": {
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.2"
