@@ -1,41 +1,57 @@
-// app1/server.js
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import fetch from 'node-fetch';
 
 
 const PORT = 3001;
 const AUTH_URL = 'http://localhost:4000';
-const JWT_SECRET = 'secretkey'; // MUSS gleich sein wie im auth-service
+const JWT_SECRET = 'secretkey';
 
 const app = express();
 app.use(express.json());
+app.use(express.static('public'));
 
-// Homepage (GET /)
-app.get('/', (req, res) => {
-  res.send(`
-    <h1>App1</h1>
-    <p>Try:</p>
-    <ul>
-      <li>POST /login  (forward to Auth-Service)</li>
-      <li>GET  /dashboard (protected)</li>
-    </ul>
-  `);
+// Proxy für /users
+app.get('/users', async (req, res) => {
+  try {
+    const response = await fetch(`${AUTH_URL}/users`);
+    const users = await response.json();
+    res.json(users);
+  } catch (e) {
+    res.status(500).send('Fehler beim Abrufen der Benutzer');
+  }
+});
+
+// Proxy für /register
+app.post('/register', async (req, res) => {
+  try {
+    console.log('Forwarding Register:', req.body); // Debug
+    const response = await fetch(`${AUTH_URL}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+    const text = await response.text();
+    res.status(response.status).send(text);
+  } catch(e) {
+    console.error('Fehler bei Register Proxy:', e);
+    res.status(500).send('Fehler bei Register');
+  }
 });
 
 
-// Login: leitet Credentials an Auth-Service weiter
+// Login-Proxy
 app.post('/login', async (req, res) => {
   const response = await fetch(`${AUTH_URL}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req.body)
   });
-
   const json = await response.json();
   return res.status(response.status).json(json);
 });
 
-// Auth-Middleware
+// Dashboard (JWT-geschützt)
 const authenticate = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
   if (!token) return res.status(401).send('No token');
@@ -47,12 +63,10 @@ const authenticate = (req, res, next) => {
   });
 };
 
-// Geschützte Route
 app.get('/dashboard', authenticate, (req, res) => {
   res.send(`Hallo ${req.user.username}, willkommen auf App1!`);
 });
 
-// Server starten
 app.listen(PORT, () => {
   console.log(`App1 läuft auf http://localhost:${PORT}/`);
 });
