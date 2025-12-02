@@ -6,6 +6,9 @@ const dashboardDiv = document.getElementById('dashboard');
 let token = localStorage.getItem('token');
 let username = localStorage.getItem('username');
 
+const logoutBtn = document.getElementById('logout-btn');
+const userSpan = document.getElementById('username-display');
+
 const allowedUsers = ['admin', 'Mike'];
 
 const usersTableBody = document.querySelector('#users-table tbody');
@@ -44,23 +47,25 @@ document.getElementById('register-btn').addEventListener('click', async () => {
   alert(text);
 });
 
-
 const showUser = () => {
   if (token && username) {
-    userInfo.innerHTML = `Eingeloggt als ${username} <button id="logout">Logout</button>`;
-    document.getElementById('logout').onclick = () => {
-      token = null;
-      username = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
-      registerFormDiv.style.display = 'none';
-      location.reload();
-    };
-    registerFormDiv.style.display = 'block';
+    userSpan.textContent = username; // Nur Benutzername
+    document.getElementById('register-form').style.display = 'block';
+    logoutBtn.style.display = 'inline-block'; // Button sichtbar
   } else {
-    userInfo.innerHTML = '';
-    registerFormDiv.style.display = 'none';
+    userSpan.textContent = '';
+    document.getElementById('register-form').style.display = 'none';
+    logoutBtn.style.display = 'none';
   }
+};
+
+logoutBtn.onclick = () => {
+  token = null;
+  username = null;
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+  showUser();
+  document.querySelector('#users-table tbody').innerHTML = '';
 };
 
 showUser();
