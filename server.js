@@ -1,11 +1,9 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
 import fetch from 'node-fetch';
 
 
 const PORT = 3001;
 const AUTH_URL = '/auth';  // oder volle URL: https://127.0.0.1/auth
-const JWT_SECRET = 'secretkey';
 
 const app = express();
 app.use(express.json());
@@ -39,7 +37,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-
 // Login-Proxy
 app.post('/login', async (req, res) => {
   const response = await fetch(`${AUTH_URL}/login`, {
@@ -49,22 +46,6 @@ app.post('/login', async (req, res) => {
   });
   const json = await response.json();
   return res.status(response.status).json(json);
-});
-
-// Dashboard (JWT-geschützt)
-const authenticate = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.status(401).send('No token');
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).send('Invalid token');
-    req.user = user;
-    next();
-  });
-};
-
-app.get('/dashboard', authenticate, (req, res) => {
-  res.send(`Hallo ${req.user.username}, willkommen auf App1!`);
 });
 
 app.listen(PORT, () => {
