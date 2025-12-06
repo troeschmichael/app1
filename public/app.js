@@ -1,7 +1,6 @@
 const loginForm = document.getElementById('login-form');
 const userInfo = document.getElementById('user-info');
 const registerFormDiv = document.getElementById('register-form');
-const dashboardDiv = document.getElementById('dashboard');
 
 let token = localStorage.getItem('token');
 let username = localStorage.getItem('username');
