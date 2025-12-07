@@ -1,13 +1,24 @@
 import express from 'express';
 import fetch from 'node-fetch';
+import path from "path";
+import { fileURLToPath } from "url";
 
+// __dirname in ES modules nachbauen
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PORT = 3001;
 const AUTH_URL = '/auth';  // oder volle URL: https://127.0.0.1/auth
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
+
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 
 // Proxy für /users
 app.get('/users', async (req, res) => {
